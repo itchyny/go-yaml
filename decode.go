@@ -22,7 +22,6 @@ import (
 	"io"
 	"math"
 	"reflect"
-	"time"
 )
 
 // ----------------------------------------------------------------------------
@@ -315,7 +314,6 @@ type decoder struct {
 
 var (
 	nodeType       = reflect.TypeOf(Node{})
-	durationType   = reflect.TypeOf(time.Duration(0))
 	stringMapType  = reflect.TypeOf(map[string]any{})
 	generalMapType = reflect.TypeOf(map[any]any{})
 	ifaceType      = generalMapType.Elem()
@@ -620,37 +618,26 @@ func (d *decoder) scalar(n *Node, out reflect.Value) bool {
 		out.Set(reflect.ValueOf(resolved))
 		return true
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		// This used to work in v2, but it's very unfriendly.
-		isDuration := out.Type() == durationType
-
 		switch resolved := resolved.(type) {
 		case int:
-			if !isDuration && !out.OverflowInt(int64(resolved)) {
+			if !out.OverflowInt(int64(resolved)) {
 				out.SetInt(int64(resolved))
 				return true
 			}
 		case int64:
-			if !isDuration && !out.OverflowInt(resolved) {
+			if !out.OverflowInt(resolved) {
 				out.SetInt(resolved)
 				return true
 			}
 		case uint64:
-			if !isDuration && resolved <= math.MaxInt64 && !out.OverflowInt(int64(resolved)) {
+			if resolved <= math.MaxInt64 && !out.OverflowInt(int64(resolved)) {
 				out.SetInt(int64(resolved))
 				return true
 			}
 		case float64:
-			if !isDuration && resolved <= math.MaxInt64 && !out.OverflowInt(int64(resolved)) {
+			if resolved <= math.MaxInt64 && !out.OverflowInt(int64(resolved)) {
 				out.SetInt(int64(resolved))
 				return true
-			}
-		case string:
-			if out.Type() == durationType {
-				d, err := time.ParseDuration(resolved)
-				if err == nil {
-					out.SetInt(int64(d))
-					return true
-				}
 			}
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:

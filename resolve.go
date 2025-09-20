@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type resolveMapItem struct {
@@ -189,13 +188,10 @@ func resolve(tag string, in string) (rtag string, out any) {
 
 		case 'D', 'S':
 			// Int, float, or timestamp.
-			// Only try values as a timestamp if the value is unquoted or there's an explicit
-			// !!timestamp tag.
-			if tag == "" || tag == timestampTag {
-				t, ok := parseTimestamp(in)
-				if ok {
-					return timestampTag, t
-				}
+			if tag == timestampTag {
+				// Ignore timestamp tag.
+				tag = strTag
+				return strTag, in
 			}
 
 			plain := strings.ReplaceAll(in, "_", "")
@@ -308,29 +304,4 @@ var allowedTimestampFormats = []string{
 	"2006-1-2",                        // date only
 	// Notable exception: time.Parse cannot handle: "2001-12-14 21:59:43.10 -5"
 	// from the set of examples.
-}
-
-// parseTimestamp parses s as a timestamp string and
-// returns the timestamp and reports whether it succeeded.
-// Timestamp formats are defined at http://yaml.org/type/timestamp.html
-func parseTimestamp(s string) (time.Time, bool) {
-	// TODO write code to check all the formats supported by
-	// http://yaml.org/type/timestamp.html instead of using time.Parse.
-
-	// Quick check: all date formats start with YYYY-.
-	i := 0
-	for ; i < len(s); i++ {
-		if c := s[i]; c < '0' || c > '9' {
-			break
-		}
-	}
-	if i != 4 || i == len(s) || s[i] != '-' {
-		return time.Time{}, false
-	}
-	for _, format := range allowedTimestampFormats {
-		if t, err := time.Parse(format, s); err == nil {
-			return t, true
-		}
-	}
-	return time.Time{}, false
 }

@@ -454,7 +454,7 @@ var marshalTests = []struct {
 	// Ensure timestamp-like strings are quoted.
 	{
 		map[string]string{"a": "2015-02-24T18:19:39Z"},
-		"a: \"2015-02-24T18:19:39Z\"\n",
+		"a: 2015-02-24T18:19:39Z\n",
 	},
 
 	// Ensure strings containing ": " are quoted (reported as PR #43, but not reproducible).

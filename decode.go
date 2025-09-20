@@ -794,11 +794,7 @@ func (d *decoder) mapping(n *Node, out reflect.Value) (good bool) {
 		// okay
 	case reflect.Interface:
 		iface := out
-		if isStringMap(n) {
-			out = reflect.MakeMap(d.stringMapType)
-		} else {
-			out = reflect.MakeMap(d.generalMapType)
-		}
+		out = reflect.MakeMap(d.stringMapType)
 		iface.Set(out)
 	default:
 		d.terror(n, mapTag, out)
@@ -864,20 +860,6 @@ func (d *decoder) mapping(n *Node, out reflect.Value) (good bool) {
 
 	d.stringMapType = stringMapType
 	d.generalMapType = generalMapType
-	return true
-}
-
-func isStringMap(n *Node) bool {
-	if n.Kind != MappingNode {
-		return false
-	}
-	l := len(n.Content)
-	for i := 0; i < l; i += 2 {
-		shortTag := n.Content[i].ShortTag()
-		if shortTag != strTag && shortTag != mergeTag {
-			return false
-		}
-	}
 	return true
 }
 

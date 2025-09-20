@@ -333,12 +333,12 @@ var unmarshalTests = []struct {
 	// Map inside interface with no type hints.
 	{
 		"a: {b: c}",
-		map[any]any{"a": map[string]any{"b": "c"}},
+		map[string]any{"a": map[string]any{"b": "c"}},
 	},
 	// Non-string map inside interface with no type hints.
 	{
 		"a: {b: c, 1: d}",
-		map[any]any{"a": map[any]any{"b": "c", 1: "d"}},
+		map[string]any{"a": map[string]any{"b": "c", "1": "d"}},
 	},
 
 	// Structs and type conversions.
@@ -1103,8 +1103,8 @@ var unmarshalErrorTests = []struct {
 	{"a: &a\n  b: *a\n", "yaml: anchor 'a' value contains itself"},
 	{"value: -", "yaml: line 1: block sequence entries are not allowed in this context"},
 	{"a: !!binary ==", "yaml: !!binary value contains invalid base64 data"},
-	{"{[.]}", `yaml: cannot use '\[\]interface \{\}\{"\."\}' as a map key; try decoding into yaml.Node`},
-	{"{{.}}", `yaml: cannot use 'map\[string]interface \{\}\{".":interface \{\}\(nil\)\}' as a map key; try decoding into yaml.Node`},
+	{"{[.]}", "cannot unmarshal !!seq into string"},
+	{"{{.}}", "cannot unmarshal !!map into string"},
 	{"b: *a\na: &a {c: 1}", `yaml: unknown anchor 'a' referenced`},
 	{"%TAG !%79! tag:yaml.org,2002:\n---\nv: !%79!int '1'", "yaml: line 1: did not find expected whitespace"},
 	{"a:\n  1:\nb\n  2:", ".*could not find expected ':'"},

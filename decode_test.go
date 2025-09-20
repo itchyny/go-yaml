@@ -1157,6 +1157,7 @@ func TestParserErrorUnmarshal(t *testing.T) {
 		Message: "could not find expected ':'",
 		Line:    2,
 		Column:  1,
+		Index:   5,
 	}
 	assert.DeepEqual(t, expectedErr, asErr)
 }
@@ -1171,6 +1172,7 @@ func TestParserErrorDecoder(t *testing.T) {
 		Message: "block sequence entries are not allowed in this context",
 		Line:    1,
 		Column:  8,
+		Index:   7,
 	}
 	assert.DeepEqual(t, expectedErr, asErr)
 }
@@ -1533,7 +1535,7 @@ func TestUnmarshalerError(t *testing.T) {
 	err := yaml.Unmarshal([]byte(data), &dst)
 	expectedErr := &yaml.TypeError{
 		Errors: []*yaml.UnmarshalError{
-			{Line: 1, Column: 17, Err: errFailing},
+			{Line: 1, Column: 17, Index: 16, Err: errFailing},
 		},
 	}
 	assert.DeepEqual(t, expectedErr, err)
@@ -1559,7 +1561,7 @@ func TestObsoleteUnmarshalerError(t *testing.T) {
 	err := yaml.Unmarshal([]byte(data), &dst)
 	expectedErr := &yaml.TypeError{
 		Errors: []*yaml.UnmarshalError{
-			{Line: 1, Column: 17, Err: errFailing},
+			{Line: 1, Column: 17, Index: 16, Err: errFailing},
 		},
 	}
 	assert.DeepEqual(t, expectedErr, err)
@@ -1587,7 +1589,7 @@ func TestTextUnmarshalerError(t *testing.T) {
 	err := yaml.Unmarshal([]byte(data), &dst)
 	expectedErr := &yaml.TypeError{
 		Errors: []*yaml.UnmarshalError{
-			{Line: 1, Column: 17, Err: errFailing},
+			{Line: 1, Column: 17, Index: 16, Err: errFailing},
 		},
 	}
 	assert.DeepEqual(t, expectedErr, err)
@@ -1603,6 +1605,7 @@ func TestUnmarshalError_Unwrapping(t *testing.T) {
 	errUnmarshal := &yaml.UnmarshalError{
 		Line:   1,
 		Column: 2,
+		Index:  1,
 		Err:    errSentinel,
 	}
 

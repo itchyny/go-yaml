@@ -17,6 +17,7 @@ package yaml
 
 import (
 	"encoding"
+	"encoding/json"
 	"fmt"
 	"io"
 	"reflect"
@@ -137,6 +138,9 @@ func (e *encoder) marshal(tag string, in reflect.Value) {
 		return
 	case time.Duration:
 		e.stringv(tag, reflect.ValueOf(value.String()))
+		return
+	case json.Number:
+		e.emitScalar(value.String(), "", "", yaml_PLAIN_SCALAR_STYLE, nil, nil, nil, nil)
 		return
 	case Marshaler:
 		v, err := value.MarshalYAML()

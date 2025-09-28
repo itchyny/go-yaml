@@ -17,6 +17,7 @@ package yaml_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net"
@@ -94,6 +95,10 @@ var marshalTests = []struct {
 	},
 	{
 		map[string]uint64{"v": 4294967296},
+		"v: 4294967296\n",
+	},
+	{
+		map[string]json.Number{"v": json.Number("4294967296")},
 		"v: 4294967296\n",
 	},
 	{

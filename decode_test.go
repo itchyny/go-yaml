@@ -18,6 +18,7 @@ package yaml_test
 import (
 	"bytes"
 	"encoding"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -66,15 +67,15 @@ var unmarshalTests = []struct {
 	},
 	{
 		"v: 10",
-		map[string]any{"v": 10},
+		map[string]any{"v": json.Number("10")},
 	},
 	{
 		"v: 0b10",
-		map[string]any{"v": 2},
+		map[string]any{"v": json.Number("2")},
 	},
 	{
 		"v: 0xA",
-		map[string]any{"v": 10},
+		map[string]any{"v": json.Number("10")},
 	},
 	{
 		"v: 4294967296",
@@ -82,7 +83,7 @@ var unmarshalTests = []struct {
 	},
 	{
 		"v: 0.1",
-		map[string]any{"v": 0.1},
+		map[string]any{"v": json.Number("0.1")},
 	},
 	{
 		"v: .1",
@@ -98,11 +99,11 @@ var unmarshalTests = []struct {
 	},
 	{
 		"v: -10",
-		map[string]any{"v": -10},
+		map[string]any{"v": json.Number("-10")},
 	},
 	{
 		"v: -.1",
-		map[string]any{"v": -0.1},
+		map[string]any{"v": json.Number("-.1")},
 	},
 	{
 		"v: -0\n",
@@ -138,15 +139,15 @@ var unmarshalTests = []struct {
 	// Floats from spec
 	{
 		"canonical: 6.8523e+5",
-		map[string]any{"canonical": 6.8523e+5},
+		map[string]any{"canonical": json.Number("6.8523e+5")},
 	},
 	{
 		"expo: 685.230_15e+03",
-		map[string]any{"expo": 685.23015e+03},
+		map[string]any{"expo": json.Number("685.23015e+03")},
 	},
 	{
 		"fixed: 685_230.15",
-		map[string]any{"fixed": 685230.15},
+		map[string]any{"fixed": json.Number("685230.15")},
 	},
 	{
 		"neginf: -.inf",
@@ -208,43 +209,43 @@ var unmarshalTests = []struct {
 	// Ints from spec
 	{
 		"canonical: 685230",
-		map[string]any{"canonical": 685230},
+		map[string]any{"canonical": json.Number("685230")},
 	},
 	{
 		"decimal: +685_230",
-		map[string]any{"decimal": 685230},
+		map[string]any{"decimal": json.Number("+685230")},
 	},
 	{
 		"octal: 02472256",
-		map[string]any{"octal": 685230},
+		map[string]any{"octal": json.Number("685230")},
 	},
 	{
 		"octal: -02472256",
-		map[string]any{"octal": -685230},
+		map[string]any{"octal": json.Number("-685230")},
 	},
 	{
 		"octal: 0o2472256",
-		map[string]any{"octal": 685230},
+		map[string]any{"octal": json.Number("685230")},
 	},
 	{
 		"octal: -0o2472256",
-		map[string]any{"octal": -685230},
+		map[string]any{"octal": json.Number("-685230")},
 	},
 	{
 		"hexa: 0x_0A_74_AE",
-		map[string]any{"hexa": 685230},
+		map[string]any{"hexa": json.Number("685230")},
 	},
 	{
 		"bin: 0b1010_0111_0100_1010_1110",
-		map[string]any{"bin": 685230},
+		map[string]any{"bin": json.Number("685230")},
 	},
 	{
 		"bin: -0b101010",
-		map[string]any{"bin": -42},
+		map[string]any{"bin": json.Number("-42")},
 	},
 	{
 		"bin: -0b1000000000000000000000000000000000000000000000000000000000000000",
-		map[string]any{"bin": -9223372036854775808},
+		map[string]any{"bin": json.Number("-9223372036854775808")},
 	},
 	{
 		"decimal: +685_230",
@@ -294,7 +295,7 @@ var unmarshalTests = []struct {
 	},
 	{
 		"seq: [A,1,C]",
-		map[string]any{"seq": []any{"A", 1, "C"}},
+		map[string]any{"seq": []any{"A", json.Number("1"), "C"}},
 	},
 	// Block sequence
 	{
@@ -315,7 +316,7 @@ var unmarshalTests = []struct {
 	},
 	{
 		"seq:\n - A\n - 1\n - C",
-		map[string]any{"seq": []any{"A", 1, "C"}},
+		map[string]any{"seq": []any{"A", json.Number("1"), "C"}},
 	},
 
 	// Literal block scalar
@@ -545,6 +546,10 @@ var unmarshalTests = []struct {
 		"v: 128",
 		map[string]int8{},
 	},
+	{
+		"v: 18446744073709551616",
+		map[string]any{"v": json.Number("18446744073709551616")},
+	},
 
 	// Quoted values.
 	{
@@ -559,7 +564,7 @@ var unmarshalTests = []struct {
 	// Explicit tags.
 	{
 		"v: !!float '1.1'",
-		map[string]any{"v": 1.1},
+		map[string]any{"v": json.Number("1.1")},
 	},
 	{
 		"v: !!float 0",
@@ -575,7 +580,7 @@ var unmarshalTests = []struct {
 	},
 	{
 		"%TAG !y! tag:yaml.org,2002:\n---\nv: !y!int '1'",
-		map[string]any{"v": 1},
+		map[string]any{"v": json.Number("1")},
 	},
 
 	// Non-specific tag (Issue #75)
@@ -883,11 +888,11 @@ var unmarshalTests = []struct {
 	// This *is* in fact a float number, per the spec. #171 was a mistake.
 	{
 		"a: 123456e1\n",
-		M{"a": 123456e1},
+		M{"a": json.Number("123456e1")},
 	},
 	{
 		"a: 123456E1\n",
-		M{"a": 123456e1},
+		M{"a": json.Number("123456E1")},
 	},
 	// yaml-test-suite 3GZX: Spec Example 7.1. Alias Nodes
 	{
@@ -1184,8 +1189,8 @@ var unmarshalerTests = []struct {
 	value     any
 }{
 	{"_: {hi: there}", "!!map", map[string]any{"hi": "there"}},
-	{"_: [1,A]", "!!seq", []any{1, "A"}},
-	{"_: 10", "!!int", 10},
+	{"_: [1,A]", "!!seq", []any{json.Number("1"), "A"}},
+	{"_: 10", "!!int", json.Number("10")},
 	{"_: null", "!!null", nil},
 	{`_: BAR!`, "!!str", "BAR!"},
 	{`_: "BAR!"`, "!!str", "BAR!"},
@@ -1203,9 +1208,12 @@ func (o *unmarshalerType) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Decode(&o.value); err != nil {
 		return err
 	}
-	if i, ok := o.value.(int); ok {
-		if result, ok := unmarshalerResult[i]; ok {
-			return result
+	if i, ok := o.value.(json.Number); ok {
+		v, err := i.Int64()
+		if err == nil {
+			if result, ok := unmarshalerResult[int(v)]; ok {
+				return result
+			}
 		}
 	}
 	return nil
@@ -1232,9 +1240,12 @@ func (o *obsoleteUnmarshalerType) UnmarshalYAML(unmarshal func(v any) error) err
 	if err := unmarshal(&o.value); err != nil {
 		return err
 	}
-	if i, ok := o.value.(int); ok {
-		if result, ok := unmarshalerResult[i]; ok {
-			return result
+	if i, ok := o.value.(json.Number); ok {
+		v, err := i.Int64()
+		if err == nil {
+			if result, ok := unmarshalerResult[int(v)]; ok {
+				return result
+			}
 		}
 	}
 	return nil
@@ -1334,8 +1345,8 @@ func TestUnmarshalerTypeError(t *testing.T) {
 	assert.NotNil(t, v.M["ghi"])
 	assert.IsNil(t, v.M["jkl"])
 
-	assert.Equal(t, 1, v.M["abc"].value)
-	assert.Equal(t, 3, v.M["ghi"].value)
+	assert.Equal(t, json.Number("1"), v.M["abc"].value)
+	assert.Equal(t, json.Number("3"), v.M["ghi"].value)
 }
 
 func TestObsoleteUnmarshalerTypeError(t *testing.T) {
@@ -1367,8 +1378,8 @@ func TestObsoleteUnmarshalerTypeError(t *testing.T) {
 	assert.NotNil(t, v.M["ghi"])
 	assert.IsNil(t, v.M["jkl"])
 
-	assert.Equal(t, 1, v.M["abc"].value)
-	assert.Equal(t, 3, v.M["ghi"].value)
+	assert.Equal(t, json.Number("1"), v.M["abc"].value)
+	assert.Equal(t, json.Number("3"), v.M["ghi"].value)
 }
 
 func TestTypeError_Unwrapping(t *testing.T) {
@@ -1734,9 +1745,9 @@ inlineSequenceMap:
 
 func TestMerge(t *testing.T) {
 	want := map[string]any{
-		"x":     1,
-		"y":     2,
-		"r":     10,
+		"x":     json.Number("1"),
+		"y":     json.Number("2"),
+		"r":     json.Number("10"),
 		"label": "center/big",
 	}
 
@@ -1858,13 +1869,13 @@ func TestMergeNestedStruct(t *testing.T) {
 
 	var testm map[string]any
 	wantm := map[string]any{
-		"f": 60,
+		"f": json.Number("60"),
 		"inner": map[string]any{
-			"a": 10,
+			"a": json.Number("10"),
 		},
-		"d": 40,
-		"e": 50,
-		"g": 70,
+		"d": json.Number("40"),
+		"e": json.Number("50"),
+		"g": json.Number("70"),
 	}
 	err = yaml.Unmarshal([]byte(mergeTestsNested), &testm)
 	assert.NoError(t, err)

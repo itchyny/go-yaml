@@ -17,6 +17,7 @@ package yaml
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"math"
 	"regexp"
 	"strconv"
@@ -130,7 +131,11 @@ func resolvableTag(tag string) bool {
 	return false
 }
 
-var yamlStyleFloat = regexp.MustCompile(`^[-+]?(\.[0-9]+|[0-9]+(\.[0-9]*)?)([eE][-+]?[0-9]+)?$`)
+var (
+	yamlStyleInt   = regexp.MustCompile(`^[-+]?(?:0|[1-9][0-9_]*)$`)
+	yamlStyleBases = regexp.MustCompile(`^[-+]?0(?:b[01_]+|o?[0-7_]+|x[0-9a-fA-F_]+)$`)
+	yamlStyleFloat = regexp.MustCompile(`^[-+]?(?:\.[0-9][0-9_]*|[0-9][0-9_]*(?:\.(?:[0-9][0-9_]*)?)?)(?:[eE][-+]?[0-9][0-9_]*)?$`)
+)
 
 func resolve(tag string, in string) (rtag string, out any) {
 	tag = shortTag(tag)
@@ -145,14 +150,17 @@ func resolve(tag string, in string) (rtag string, out any) {
 		case floatTag:
 			if rtag == intTag {
 				switch v := out.(type) {
-				case int64:
-					rtag = floatTag
-					out = float64(v)
-					return
 				case int:
 					rtag = floatTag
 					out = float64(v)
 					return
+				case json.Number:
+					rtag = floatTag
+					f, err := v.Float64()
+					if err == nil {
+						out = f
+						return
+					}
 				}
 			}
 		}
@@ -195,23 +203,30 @@ func resolve(tag string, in string) (rtag string, out any) {
 			}
 
 			plain := strings.ReplaceAll(in, "_", "")
-			intv, err := strconv.ParseInt(plain, 0, 64)
-			if err == nil {
-				if intv == int64(int(intv)) {
-					return intTag, int(intv)
-				} else {
-					return intTag, intv
+			if yamlStyleInt.MatchString(in) {
+				return intTag, json.Number(plain)
+			}
+			if yamlStyleBases.MatchString(in) {
+				var neg bool
+				switch plain[0] {
+				case '-':
+					neg = true
+					fallthrough
+				case '+':
+					plain = plain[1:]
 				}
-			}
-			uintv, err := strconv.ParseUint(plain, 0, 64)
-			if err == nil {
-				return intTag, uintv
-			}
-			if yamlStyleFloat.MatchString(plain) {
-				floatv, err := strconv.ParseFloat(plain, 64)
+				u, err := strconv.ParseUint(plain, 0, 64)
 				if err == nil {
-					return floatTag, floatv
+					if !neg {
+						return intTag, json.Number(strconv.FormatUint(u, 10))
+					}
+					if u <= -math.MinInt64 {
+						return intTag, json.Number(strconv.FormatInt(-int64(u), 10))
+					}
 				}
+			}
+			if yamlStyleFloat.MatchString(in) {
+				return floatTag, json.Number(plain)
 			}
 			if strings.HasPrefix(plain, "0b") {
 				intv, err := strconv.ParseInt(plain[2:], 2, 64)

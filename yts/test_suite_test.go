@@ -1,6 +1,7 @@
 package yts
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -223,7 +224,9 @@ func runTest(t *testing.T, testPath string) {
 			return
 		}
 		var jsonValue any
-		jsonErr := json.Unmarshal(inJSON, &jsonValue)
+		dec := json.NewDecoder(bytes.NewReader(inJSON))
+		dec.UseNumber()
+		jsonErr := dec.Decode(&jsonValue)
 		if jsonErr != nil {
 			t.Errorf("Test: %s\nDescription: %s\nError: Failed to unmarshal in.json: %v", testPath, testDescription, jsonErr)
 		} else if !reflect.DeepEqual(currentUnmarshaledValue, jsonValue) {

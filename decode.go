@@ -18,10 +18,13 @@ package yaml
 import (
 	"encoding"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 // ----------------------------------------------------------------------------
@@ -639,6 +642,19 @@ func (d *decoder) scalar(n *Node, out reflect.Value) bool {
 				out.SetInt(int64(resolved))
 				return true
 			}
+		case json.Number:
+			i, err := resolved.Int64()
+			if err == nil && !out.OverflowInt(i) {
+				out.SetInt(i)
+				return true
+			}
+			if tag == floatTag {
+				f, err := resolved.Float64()
+				if err == nil && math.MinInt64 <= f && f <= math.MaxInt64 && !out.OverflowInt(int64(f)) {
+					out.SetInt(int64(f))
+					return true
+				}
+			}
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		switch resolved := resolved.(type) {
@@ -661,6 +677,19 @@ func (d *decoder) scalar(n *Node, out reflect.Value) bool {
 			if resolved <= math.MaxUint64 && !out.OverflowUint(uint64(resolved)) {
 				out.SetUint(uint64(resolved))
 				return true
+			}
+		case json.Number:
+			i, err := strconv.ParseUint(strings.TrimPrefix(resolved.String(), "+"), 10, 64)
+			if err == nil && !out.OverflowUint(i) {
+				out.SetUint(i)
+				return true
+			}
+			if tag == floatTag {
+				f, err := resolved.Float64()
+				if err == nil && 0 <= f && f <= math.MaxInt64 && !out.OverflowUint(uint64(f)) {
+					out.SetUint(uint64(f))
+					return true
+				}
 			}
 		}
 	case reflect.Bool:
@@ -694,6 +723,12 @@ func (d *decoder) scalar(n *Node, out reflect.Value) bool {
 		case float64:
 			out.SetFloat(resolved)
 			return true
+		case json.Number:
+			f, err := resolved.Float64()
+			if err == nil {
+				out.SetFloat(f)
+				return true
+			}
 		}
 	case reflect.Struct:
 		if resolvedv := reflect.ValueOf(resolved); out.Type() == resolvedv.Type() {

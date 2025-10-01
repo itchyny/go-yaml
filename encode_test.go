@@ -27,8 +27,8 @@ import (
 	"testing"
 	"time"
 
-	"go.yaml.in/yaml/v4"
-	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"github.com/itchyny/go-yaml"
+	"github.com/itchyny/go-yaml/internal/testutil/assert"
 )
 
 var marshalIntTest = 123

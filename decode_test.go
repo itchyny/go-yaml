@@ -28,8 +28,8 @@ import (
 	"testing"
 	"time"
 
-	"go.yaml.in/yaml/v4"
-	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"github.com/itchyny/go-yaml"
+	"github.com/itchyny/go-yaml/internal/testutil/assert"
 )
 
 // negativeZero represents -0.0 for YAML test cases

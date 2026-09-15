@@ -9,6 +9,7 @@ package libyaml
 
 import (
 	"encoding"
+	"encoding/json"
 	"reflect"
 	"regexp"
 	"sort"
@@ -88,6 +89,8 @@ func (r *Representer) represent(tag string, in reflect.Value) *Node {
 			in = n
 		}
 		return r.nodev(in.Addr())
+	case json.Number:
+		return r.numberv(tag, in)
 	case Marshaler:
 		v, err := value.MarshalYAML()
 		if err != nil {
@@ -305,6 +308,20 @@ func (r *Representer) boolv(tag string, in reflect.Value) *Node {
 	}
 	if tag == "" {
 		tag = boolTag
+	}
+	return &Node{
+		Kind:  ScalarNode,
+		Tag:   tag,
+		Value: s,
+	}
+}
+
+// numberv converts a Go [json.Number] to a YAML scalar node, keeping the
+// number literal as it is.
+func (r *Representer) numberv(tag string, in reflect.Value) *Node {
+	s := in.String()
+	if tag == "" {
+		tag, _ = resolve("", s)
 	}
 	return &Node{
 		Kind:  ScalarNode,

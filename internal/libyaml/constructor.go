@@ -619,11 +619,7 @@ func (c *Constructor) mapping(n *Node, out reflect.Value) (good bool) {
 		// okay
 	case reflect.Interface:
 		iface := out
-		if isStringMap(n) {
-			out = reflect.MakeMap(c.stringMapType)
-		} else {
-			out = reflect.MakeMap(c.generalMapType)
-		}
+		out = reflect.MakeMap(c.stringMapType)
 		iface.Set(out)
 	default:
 		c.tagError(n, mapTag, out)
@@ -822,23 +818,6 @@ func (c *Constructor) merge(parent *Node, merge *Node, out reflect.Value) {
 	}
 
 	c.mergedFields = mergedFields
-}
-
-// isStringMap checks if a MappingNode has only string or merge keys.
-// This determines whether to use map[string]any or map[any]any when
-// constructing into an interface{}.
-func isStringMap(n *Node) bool {
-	if n.Kind != MappingNode {
-		return false
-	}
-	l := len(n.Content)
-	for i := 0; i < l; i += 2 {
-		shortTag := n.Content[i].ShortTag()
-		if shortTag != strTag && shortTag != mergeTag {
-			return false
-		}
-	}
-	return true
 }
 
 // isMerge checks if a node is a merge key (!!merge tag).

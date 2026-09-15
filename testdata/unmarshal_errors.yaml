@@ -72,12 +72,12 @@
 - unmarshal-error:
     name: Slice as map key
     yaml: '{[.]}'
-    want: "go-yaml load error in constructor at L1.C2: cannot use '[]interface {}{\".\"}' as a map key; try decoding into yaml.Node"
+    want: 'yaml: construct errors: line 1: cannot construct !!seq into string'
 
 - unmarshal-error:
     name: Map as map key
     yaml: '{{.}}'
-    want: "go-yaml load error in constructor at L1.C2: cannot use 'map[string]interface {}{\".\":interface {}(nil)}' as a map key; try decoding into yaml.Node"
+    want: 'yaml: construct errors: line 1: cannot construct !!map into string'
 
 - unmarshal-error:
     name: Slice as map key beside a merge key (Issue 378)

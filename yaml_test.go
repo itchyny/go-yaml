@@ -477,6 +477,17 @@ var unmarshalTests = []struct {
 		map[string]struct{ B any }{"a": {map[string]any{"c": "d"}}},
 	},
 
+	// Map inside interface with no type hints.
+	{
+		"a: {b: c}",
+		map[string]any{"a": map[string]any{"b": "c"}},
+	},
+	// Non-string map inside interface with no type hints.
+	{
+		"a: {b: c, 1: d}",
+		map[string]any{"a": map[string]any{"b": "c", "1": "d"}},
+	},
+
 	// Custom map type.
 	{
 		"a: {b: c}",

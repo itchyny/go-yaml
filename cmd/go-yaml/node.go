@@ -8,7 +8,7 @@ package main
 import (
 	"fmt"
 
-	"go.yaml.in/yaml/v4"
+	"github.com/itchyny/go-yaml"
 )
 
 // TagDirectiveInfo represents a YAML %TAG directive

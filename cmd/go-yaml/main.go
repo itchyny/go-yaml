@@ -17,7 +17,7 @@ import (
 	"os"
 	"strings"
 
-	"go.yaml.in/yaml/v4"
+	"github.com/itchyny/go-yaml"
 )
 
 // version is the current version of the go-yaml CLI tool.
@@ -693,7 +693,7 @@ func ProcessNodeUnmarshal(reader io.Reader, profuse bool) error {
 func printHelp() {
 	fmt.Printf(`go-yaml version %s
 
-The 'go-yaml' tool shows how the go.yaml.in/yaml/v4 library handles YAML both
+The 'go-yaml' tool shows how the github.com/itchyny/go-yaml library handles YAML both
 internally and externally. It is a tool for testing and debugging the library.
 
 It reads YAML input text from stdin or a file and writes results to stdout.

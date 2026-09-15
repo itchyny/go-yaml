@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"github.com/itchyny/go-yaml/internal/testutil/assert"
 )
 
 func TestConstructor(t *testing.T) {

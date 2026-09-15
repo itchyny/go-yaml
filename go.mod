@@ -1,3 +1,3 @@
-module go.yaml.in/yaml/v4
+module github.com/itchyny/go-yaml
 
 go 1.18

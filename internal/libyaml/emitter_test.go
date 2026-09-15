@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"github.com/itchyny/go-yaml/internal/testutil/assert"
 )
 
 func TestEmitter(t *testing.T) {

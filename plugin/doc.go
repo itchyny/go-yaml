@@ -16,8 +16,8 @@
 //
 // Import the plugin you need and register it with WithPlugin:
 //
-//	import "go.yaml.in/yaml/v4"
-//	import "go.yaml.in/yaml/v4/plugin/limit"
+//	import "github.com/itchyny/go-yaml"
+//	import "github.com/itchyny/go-yaml/plugin/limit"
 //
 //	// Disable alias checking for documents with many aliases
 //	loader := yaml.NewLoader(data, yaml.WithPlugin(limit.New(limit.AliasNone())))

@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -144,10 +143,10 @@ func resolve(tag string, in string) (rtag string, out any) {
 			}
 
 			plain := strings.ReplaceAll(in, "_", "")
-			if yamlStyleInt.MatchString(in) {
+			if isYAMLInt(in) {
 				return intTag, json.Number(normalizeNumber(plain))
 			}
-			if yamlStyleBases.MatchString(in) {
+			if isYAMLBases(in) {
 				var neg bool
 				switch plain[0] {
 				case '-':
@@ -166,7 +165,7 @@ func resolve(tag string, in string) (rtag string, out any) {
 					}
 				}
 			}
-			if yamlStyleFloat.MatchString(in) {
+			if isYAMLFloat(in) {
 				return floatTag, json.Number(normalizeNumber(plain))
 			}
 		default:
@@ -184,16 +183,126 @@ var (
 	resolveMap   = make(map[string]resolveMapItem)
 )
 
-// yamlStyleInt matches decimal integers in YAML style (including underscore
-// separators).
-// yamlStyleBases matches binary, octal and hexadecimal integers in YAML style.
-// yamlStyleFloat matches floating-point numbers in YAML style (including
-// scientific notation and numbers starting with a dot).
-var (
-	yamlStyleInt   = regexp.MustCompile(`^[-+]?(?:0|[1-9][0-9_]*)$`)
-	yamlStyleBases = regexp.MustCompile(`^[-+]?0(?:b[01_]+|o?[0-7_]+|x[0-9a-fA-F_]+)$`)
-	yamlStyleFloat = regexp.MustCompile(`^[-+]?(?:\.[0-9][0-9_]*|[0-9][0-9_]*(?:\.(?:[0-9][0-9_]*)?)?)(?:[eE][-+]?[0-9][0-9_]*)?$`)
-)
+// isYAMLInt reports whether s is a decimal integer in YAML style, which is
+// an optional sign followed by a zero, or by digits not starting with a zero,
+// with underscore separators: ^[-+]?(?:0|[1-9][0-9_]*)$
+func isYAMLInt(s string) bool {
+	if s = trimSign(s); s == "" {
+		return false
+	}
+	if s[0] == '0' {
+		return len(s) == 1
+	}
+	if s[0] < '1' || s[0] > '9' {
+		return false
+	}
+	return trimDigits(s) == ""
+}
+
+// isYAMLBases reports whether s is a binary, an octal, or a hexadecimal
+// integer in YAML style, which is an optional sign followed by a zero, a base
+// prefix, and the digits of the base, with underscore separators:
+// ^[-+]?0(?:b[01_]+|o?[0-7_]+|x[0-9a-fA-F_]+)$
+func isYAMLBases(s string) bool {
+	if s = trimSign(s); len(s) < 2 || s[0] != '0' {
+		return false
+	}
+	switch s = s[1:]; s[0] {
+	case 'b':
+		return isBaseChars(s[1:], isBinaryChar)
+	case 'o':
+		return isBaseChars(s[1:], isOctalChar)
+	case 'x':
+		return isBaseChars(s[1:], isHexChar)
+	default:
+		// The octal prefix is optional for compatibility with YAML 1.1.
+		return isBaseChars(s, isOctalChar)
+	}
+}
+
+// isYAMLFloat reports whether s is a float in YAML style, which is an optional
+// sign followed by digits with an optional decimal point and an optional
+// exponent, with underscore separators:
+// ^[-+]?(?:\.[0-9][0-9_]*|[0-9][0-9_]*(?:\.(?:[0-9][0-9_]*)?)?)(?:[eE][-+]?[0-9][0-9_]*)?$
+func isYAMLFloat(s string) bool {
+	if s = trimSign(s); s == "" {
+		return false
+	}
+	if s[0] == '.' {
+		// The fraction requires a digit when there is no integer part.
+		if s = s[1:]; s == "" || !isDecimalChar(s[0]) {
+			return false
+		}
+		s = trimDigits(s)
+	} else {
+		if !isDecimalChar(s[0]) {
+			return false
+		}
+		if s = trimDigits(s); s == "" {
+			return true
+		}
+		if s[0] == '.' {
+			if s = s[1:]; s != "" && isDecimalChar(s[0]) {
+				s = trimDigits(s)
+			}
+		}
+	}
+	if s == "" {
+		return true
+	}
+	if s[0] != 'e' && s[0] != 'E' {
+		return false
+	}
+	s = trimSign(s[1:])
+	if s == "" || !isDecimalChar(s[0]) {
+		return false
+	}
+	return trimDigits(s) == ""
+}
+
+// trimSign trims the leading sign of s.
+func trimSign(s string) string {
+	if s != "" && (s[0] == '-' || s[0] == '+') {
+		return s[1:]
+	}
+	return s
+}
+
+// trimDigits trims the leading digits of s, which may contain underscore
+// separators after the first digit.
+func trimDigits(s string) string {
+	i := 1
+	for ; i < len(s); i++ {
+		if !isDecimalChar(s[i]) && s[i] != '_' {
+			break
+		}
+	}
+	return s[i:]
+}
+
+// isBaseChars reports whether s consists of the digits of a base, which
+// requires at least one character, and may contain underscore separators.
+func isBaseChars(s string, isBaseChar func(byte) bool) bool {
+	if s == "" {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		if !isBaseChar(s[i]) && s[i] != '_' {
+			return false
+		}
+	}
+	return true
+}
+
+func isDecimalChar(c byte) bool { return '0' <= c && c <= '9' }
+
+func isBinaryChar(c byte) bool { return c == '0' || c == '1' }
+
+func isOctalChar(c byte) bool { return '0' <= c && c <= '7' }
+
+func isHexChar(c byte) bool {
+	return isDecimalChar(c) || 'a' <= c && c <= 'f' || 'A' <= c && c <= 'F'
+}
 
 // init initializes the resolveTable with character class mappings for tag resolution.
 func init() {
@@ -277,16 +386,16 @@ func isJSONNumber(s string) bool {
 		i++
 	}
 	// A leading plus sign, or no digit before the decimal point.
-	if i == len(s) || s[i] < '0' || s[i] > '9' {
+	if i == len(s) || !isDecimalChar(s[i]) {
 		return false
 	}
 	// A redundant leading zero.
-	if s[i] == '0' && i+1 < len(s) && '0' <= s[i+1] && s[i+1] <= '9' {
+	if s[i] == '0' && i+1 < len(s) && isDecimalChar(s[i+1]) {
 		return false
 	}
 	// No digit after the decimal point.
 	if i := strings.IndexByte(s, '.'); i >= 0 &&
-		(i+1 == len(s) || s[i+1] < '0' || s[i+1] > '9') {
+		(i+1 == len(s) || !isDecimalChar(s[i+1])) {
 		return false
 	}
 	return true

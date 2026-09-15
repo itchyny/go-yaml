@@ -8,9 +8,11 @@
 package datatest
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -145,6 +147,31 @@ func setField(field reflect.Value, value any) error {
 				return err
 			}
 			return nil
+		}
+	}
+
+	// Integers and floats are constructed as json.Number, so convert them
+	// to the numeric type that the field expects.
+	if num, ok := value.(json.Number); ok {
+		switch fieldType.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			i64, err := num.Int64()
+			if err != nil {
+				return fmt.Errorf("field type %v expects an integer value, but got %q", fieldType, num)
+			}
+			value = i64
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			u64, err := strconv.ParseUint(strings.TrimPrefix(num.String(), "+"), 10, 64)
+			if err != nil {
+				return fmt.Errorf("field type %v expects an unsigned integer value, but got %q", fieldType, num)
+			}
+			value = u64
+		case reflect.Float32, reflect.Float64:
+			f64, err := num.Float64()
+			if err != nil {
+				return fmt.Errorf("field type %v expects a float value, but got %q", fieldType, num)
+			}
+			value = f64
 		}
 	}
 

@@ -9,6 +9,7 @@ package yaml_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -201,7 +202,7 @@ var nodeEncodeDecodeTests = []struct {
 		Tag:   "!!str",
 	},
 }, {
-	123,
+	json.Number("123"),
 	"123",
 	yaml.Node{
 		Kind:  yaml.ScalarNode,
@@ -209,7 +210,7 @@ var nodeEncodeDecodeTests = []struct {
 		Tag:   "!!int",
 	},
 }, {
-	[]any{1, 2},
+	[]any{json.Number("1"), json.Number("2")},
 	"[1, 2]",
 	yaml.Node{
 		Kind: yaml.SequenceNode,

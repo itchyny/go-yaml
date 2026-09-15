@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"go.yaml.in/yaml/v4/internal/testutil/datatest"
 )
 
 func TestErrors(t *testing.T) {
@@ -317,7 +318,7 @@ func getInt(t *testing.T, spec map[string]any, key string) int {
 	if !ok {
 		return 0
 	}
-	i, ok := v.(int)
+	i, ok := datatest.AsInt(v)
 	assert.Truef(t, ok, "%s should be int, got %T", key, v)
 	return i
 }

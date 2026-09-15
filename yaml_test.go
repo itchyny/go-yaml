@@ -36,17 +36,6 @@ var negativeZero = math.Copysign(0.0, -1.0)
 
 var unmarshalIntTest = 123
 
-// archSafeInt returns v as int if it fits in the architecture's int type,
-// otherwise returns int64.
-func archSafeInt(v int64) any {
-	if strconv.IntSize == 64 || math.MinInt32 <= v && v <= math.MaxInt32 {
-		return int(v) // int is safe
-	}
-
-	// on 32-bit systems, and v overflows int, we need to return an int64
-	return v
-}
-
 // Named struct types for data-driven tests
 type (
 	testStructHello                struct{ Hello string }
@@ -310,7 +299,7 @@ var unmarshalTests = []struct {
 	// Cross-architecture numeric tests
 	{
 		"bin: -0b1000000000000000000000000000000000000000000000000000000000000000",
-		map[string]any{"bin": archSafeInt(math.MinInt64)},
+		map[string]any{"bin": json.Number("-9223372036854775808")},
 	},
 	{
 		// When unmarshaling into map[string]int64, values that overflow int64
@@ -1025,8 +1014,8 @@ var unmarshalerTests = []struct {
 	value     any
 }{
 	{"_: {hi: there}", "!!map", map[string]any{"hi": "there"}},
-	{"_: [1,A]", "!!seq", []any{1, "A"}},
-	{"_: 10", "!!int", 10},
+	{"_: [1,A]", "!!seq", []any{json.Number("1"), "A"}},
+	{"_: 10", "!!int", json.Number("10")},
 	{"_: null", "!!null", nil},
 	{`_: BAR!`, "!!str", "BAR!"},
 	{`_: "BAR!"`, "!!str", "BAR!"},
@@ -1044,9 +1033,12 @@ func (o *unmarshalerType) UnmarshalYAML(value *yaml.Node) error {
 	if err := value.Load(&o.value); err != nil {
 		return err
 	}
-	if i, ok := o.value.(int); ok {
-		if result, ok := unmarshalerResult[i]; ok {
-			return result
+	if i, ok := o.value.(json.Number); ok {
+		v, err := i.Int64()
+		if err == nil {
+			if result, ok := unmarshalerResult[int(v)]; ok {
+				return result
+			}
 		}
 	}
 	return nil
@@ -1073,9 +1065,12 @@ func (o *legacyUnmarshalerType) UnmarshalYAML(unmarshal func(v any) error) error
 	if err := unmarshal(&o.value); err != nil {
 		return err
 	}
-	if i, ok := o.value.(int); ok {
-		if result, ok := unmarshalerResult[i]; ok {
-			return result
+	if i, ok := o.value.(json.Number); ok {
+		v, err := i.Int64()
+		if err == nil {
+			if result, ok := unmarshalerResult[int(v)]; ok {
+				return result
+			}
 		}
 	}
 	return nil
@@ -1191,8 +1186,8 @@ func TestUnmarshalerLoadErrors(t *testing.T) {
 	assert.NotNil(t, v.M["ghi"])
 	assert.IsNil(t, v.M["jkl"])
 
-	assert.Equal(t, 1, v.M["abc"].value)
-	assert.Equal(t, 3, v.M["ghi"].value)
+	assert.Equal(t, json.Number("1"), v.M["abc"].value)
+	assert.Equal(t, json.Number("3"), v.M["ghi"].value)
 }
 
 func TestLegacyUnmarshalerLoadErrors(t *testing.T) {
@@ -1224,8 +1219,8 @@ func TestLegacyUnmarshalerLoadErrors(t *testing.T) {
 	assert.NotNil(t, v.M["ghi"])
 	assert.IsNil(t, v.M["jkl"])
 
-	assert.Equal(t, 1, v.M["abc"].value)
-	assert.Equal(t, 3, v.M["ghi"].value)
+	assert.Equal(t, json.Number("1"), v.M["abc"].value)
+	assert.Equal(t, json.Number("3"), v.M["ghi"].value)
 }
 
 func TestLoadErrors_Unwrapping(t *testing.T) {
@@ -1624,7 +1619,7 @@ func TestUnmarshalerNodeKind(t *testing.T) {
 			name:     "sequence",
 			input:    "[1, 2, 3]",
 			wantKind: libyaml.SequenceNode,
-			wantData: []any{1, 2, 3},
+			wantData: []any{json.Number("1"), json.Number("2"), json.Number("3")},
 		},
 		{
 			name:     "mapping",
@@ -1709,9 +1704,9 @@ inlineSequenceMap:
 
 func TestMerge(t *testing.T) {
 	want := map[string]any{
-		"x":     1,
-		"y":     2,
-		"r":     10,
+		"x":     json.Number("1"),
+		"y":     json.Number("2"),
+		"r":     json.Number("10"),
 		"label": "center/big",
 	}
 
@@ -1833,13 +1828,13 @@ func TestMergeNestedStruct(t *testing.T) {
 
 	var testm map[string]any
 	wantm := map[string]any{
-		"f": 60,
+		"f": json.Number("60"),
 		"inner": map[string]any{
-			"a": 10,
+			"a": json.Number("10"),
 		},
-		"d": 40,
-		"e": 50,
-		"g": 70,
+		"d": json.Number("40"),
+		"e": json.Number("50"),
+		"g": json.Number("70"),
 	}
 	err = yaml.Unmarshal([]byte(mergeTestsNested), &testm)
 	assert.NoError(t, err)

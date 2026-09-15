@@ -35,6 +35,7 @@
 package limit
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"go.yaml.in/yaml/v4/internal/libyaml"
@@ -155,6 +156,22 @@ func (p *Plugin) CheckAlias(aliasCount, constructCount int) error {
 	return libyaml.DefaultAliasCheck(aliasCount, constructCount)
 }
 
+// intValue returns the int value of a scalar constructed from YAML.
+// Integers are constructed as [json.Number], so they are converted here.
+func intValue(val any) (int, bool) {
+	switch val := val.(type) {
+	case int:
+		return val, true
+	case json.Number:
+		n, err := val.Int64()
+		if err != nil || int64(int(n)) != n {
+			return 0, false
+		}
+		return int(n), true
+	}
+	return 0, false
+}
+
 // NewFromYAML creates a limit plugin from a YAML config map.
 // Keys: "depth" (int or null), "alias" (int or null).
 // Null values disable the corresponding check.
@@ -167,7 +184,7 @@ func NewFromYAML(cfg map[string]any) (*Plugin, error) {
 			if val == nil {
 				opts = append(opts, DepthNone())
 			} else {
-				n, ok := val.(int)
+				n, ok := intValue(val)
 				if !ok {
 					return nil, fmt.Errorf("limit: depth must be int or null, got %T", val)
 				}
@@ -177,7 +194,7 @@ func NewFromYAML(cfg map[string]any) (*Plugin, error) {
 			if val == nil {
 				opts = append(opts, AliasNone())
 			} else {
-				n, ok := val.(int)
+				n, ok := intValue(val)
 				if !ok {
 					return nil, fmt.Errorf("limit: alias must be int or null, got %T", val)
 				}

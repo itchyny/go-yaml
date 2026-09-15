@@ -93,8 +93,7 @@ func GetInt(tc map[string]any, key string) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	intVal, ok := val.(int)
-	return intVal, ok
+	return AsInt(val)
 }
 
 // GetBool extracts a bool field from a test case map.

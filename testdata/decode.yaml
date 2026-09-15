@@ -758,14 +758,14 @@
     yaml: 'v: !!float 0'
     type: map[string]any
     want:
-      v: 0.0
+      v: 0
 
 - decode:
     name: explicit float tag on negative one
     yaml: 'v: !!float -1'
     type: map[string]any
     want:
-      v: -1.0
+      v: -1
 
 - decode:
     name: explicit null tag on empty string
@@ -926,7 +926,7 @@
       a: 123456e1
     type: map[string]any
     want:
-      a: 1.23456e+06
+      a: 123456e1
 
 - decode:
     name: scientific notation uppercase E
@@ -934,7 +934,7 @@
       a: 123456E1
     type: map[string]any
     want:
-      a: 1.23456e+06
+      a: 123456E1
 
 # Unicode and encoding
 - decode:

@@ -6,10 +6,12 @@
 package libyaml
 
 import (
+	"encoding/json"
 	"regexp"
 	"testing"
 
 	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"go.yaml.in/yaml/v4/internal/testutil/datatest"
 )
 
 func TestOptions(t *testing.T) {
@@ -39,7 +41,7 @@ func TestOptions(t *testing.T) {
 func runWithIndentTest(t *testing.T, tc TestCase) {
 	t.Helper()
 
-	indent, ok := tc.From.(int)
+	indent, ok := datatest.AsInt(tc.From)
 	if !ok {
 		t.Fatalf("from should be int, got %T", tc.From)
 	}
@@ -171,7 +173,7 @@ func runWithAllDocumentsTest(t *testing.T, tc TestCase) {
 func runWithLineWidthTest(t *testing.T, tc TestCase) {
 	t.Helper()
 
-	width, ok := tc.From.(int)
+	width, ok := datatest.AsInt(tc.From)
 	if !ok {
 		t.Fatalf("from should be int, got %T", tc.From)
 	}
@@ -395,8 +397,12 @@ func parseLineBreak(t *testing.T, from any) LineBreak {
 		default:
 			t.Fatalf("unknown LineBreak constant: %s", v)
 		}
-	case int:
-		return LineBreak(v)
+	case json.Number:
+		i, ok := datatest.AsInt(v)
+		if !ok {
+			t.Fatalf("from should be string or int, got %q", v)
+		}
+		return LineBreak(i)
 	default:
 		t.Fatalf("from should be string or int, got %T", from)
 	}
@@ -419,8 +425,12 @@ func parseQuoteStyle(t *testing.T, from any) QuoteStyle {
 		default:
 			t.Fatalf("unknown QuoteStyle constant: %s", v)
 		}
-	case int:
-		return QuoteStyle(v)
+	case json.Number:
+		i, ok := datatest.AsInt(v)
+		if !ok {
+			t.Fatalf("from should be string or int, got %q", v)
+		}
+		return QuoteStyle(i)
 	default:
 		t.Fatalf("from should be string or int, got %T", from)
 	}
@@ -443,7 +453,7 @@ func checkWantFields(t *testing.T, opts *Options, want any) {
 	for key, expectedValue := range wantMap {
 		switch key {
 		case "indent":
-			expected, ok := expectedValue.(int)
+			expected, ok := datatest.AsInt(expectedValue)
 			if !ok {
 				t.Fatalf("want.indent should be int, got %T", expectedValue)
 			}
@@ -485,7 +495,7 @@ func checkWantFields(t *testing.T, opts *Options, want any) {
 			assert.Equalf(t, expected, opts.AllDocuments, "AllDocuments = %v, want %v", opts.AllDocuments, expected)
 
 		case "line_width":
-			expected, ok := expectedValue.(int)
+			expected, ok := datatest.AsInt(expectedValue)
 			if !ok {
 				t.Fatalf("want.line_width should be int, got %T", expectedValue)
 			}

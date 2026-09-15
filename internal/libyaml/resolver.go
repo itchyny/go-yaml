@@ -10,6 +10,7 @@ package libyaml
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math"
 	"regexp"
@@ -99,15 +100,11 @@ func resolve(tag string, in string) (rtag string, out any) {
 		case "", rtag, strTag, binaryTag:
 			return
 		case floatTag:
+			// Numbers are resolved into json.Number, so an explicit
+			// !!float tag only changes the tag of an integer.
 			if rtag == intTag {
-				switch v := out.(type) {
-				case int64:
+				if _, ok := out.(json.Number); ok {
 					rtag = floatTag
-					out = float64(v)
-					return
-				case int:
-					rtag = floatTag
-					out = float64(v)
 					return
 				}
 			}
@@ -138,15 +135,8 @@ func resolve(tag string, in string) (rtag string, out any) {
 		case 'M':
 			// We've already checked the map above.
 
-		case '.':
-			// Not in the map, so maybe a normal float.
-			floatv, err := strconv.ParseFloat(in, 64)
-			if err == nil {
-				return floatTag, floatv
-			}
-
-		case 'D', 'S':
-			// Int, float, or timestamp.
+		case '.', 'D', 'S':
+			// Int or float.
 			if tag == timestampTag {
 				// Ignore timestamp tag.
 				tag = strTag
@@ -154,23 +144,30 @@ func resolve(tag string, in string) (rtag string, out any) {
 			}
 
 			plain := strings.ReplaceAll(in, "_", "")
-			intv, err := strconv.ParseInt(plain, 0, 64)
-			if err == nil {
-				if intv == int64(int(intv)) {
-					return intTag, int(intv)
-				} else {
-					return intTag, intv
+			if yamlStyleInt.MatchString(in) {
+				return intTag, json.Number(normalizeNumber(plain))
+			}
+			if yamlStyleBases.MatchString(in) {
+				var neg bool
+				switch plain[0] {
+				case '-':
+					neg = true
+					fallthrough
+				case '+':
+					plain = plain[1:]
 				}
-			}
-			uintv, err := strconv.ParseUint(plain, 0, 64)
-			if err == nil {
-				return intTag, uintv
-			}
-			if yamlStyleFloat.MatchString(plain) {
-				floatv, err := strconv.ParseFloat(plain, 64)
+				u, err := strconv.ParseUint(plain, 0, 64)
 				if err == nil {
-					return floatTag, floatv
+					if !neg {
+						return intTag, json.Number(strconv.FormatUint(u, 10))
+					}
+					if u <= -math.MinInt64 {
+						return intTag, json.Number(strconv.FormatInt(-int64(u), 10))
+					}
 				}
+			}
+			if yamlStyleFloat.MatchString(in) {
+				return floatTag, json.Number(normalizeNumber(plain))
 			}
 		default:
 			panic("internal error: missing handler for resolver table: " + string(rune(hint)) + " (with " + in + ")")
@@ -187,14 +184,16 @@ var (
 	resolveMap   = make(map[string]resolveMapItem)
 )
 
-// negativeZero represents -0.0 for YAML encoding/decoding
-// this is needed because Go constants cannot express -0.0
-// https://staticcheck.dev/docs/checks/#SA4026
-var negativeZero = math.Copysign(0.0, -1.0)
-
+// yamlStyleInt matches decimal integers in YAML style (including underscore
+// separators).
+// yamlStyleBases matches binary, octal and hexadecimal integers in YAML style.
 // yamlStyleFloat matches floating-point numbers in YAML style (including
 // scientific notation and numbers starting with a dot).
-var yamlStyleFloat = regexp.MustCompile(`^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)(?:[eE][-+]?[0-9]+)?$`)
+var (
+	yamlStyleInt   = regexp.MustCompile(`^[-+]?(?:0|[1-9][0-9_]*)$`)
+	yamlStyleBases = regexp.MustCompile(`^[-+]?0(?:b[01_]+|o?[0-7_]+|x[0-9a-fA-F_]+)$`)
+	yamlStyleFloat = regexp.MustCompile(`^[-+]?(?:\.[0-9][0-9_]*|[0-9][0-9_]*(?:\.(?:[0-9][0-9_]*)?)?)(?:[eE][-+]?[0-9][0-9_]*)?$`)
+)
 
 // init initializes the resolveTable with character class mappings for tag resolution.
 func init() {
@@ -221,7 +220,6 @@ func init() {
 		{math.Inf(+1), floatTag, []string{".inf", ".Inf", ".INF"}},
 		{math.Inf(+1), floatTag, []string{"+.inf", "+.Inf", "+.INF"}},
 		{math.Inf(-1), floatTag, []string{"-.inf", "-.Inf", "-.INF"}},
-		{negativeZero, floatTag, []string{"-0", "-0.0"}},
 		{"<<", mergeTag, []string{"<<"}},
 	}
 
@@ -241,6 +239,57 @@ func resolvableTag(tag string) bool {
 		return true
 	}
 	return false
+}
+
+// normalizeNumber rewrites a YAML number literal in JSON number syntax, so
+// that the resulting [json.Number] can be marshaled as JSON.
+func normalizeNumber(s string) string {
+	if isJSONNumber(s) {
+		return s
+	}
+	var sign string
+	if s[0] == '-' || s[0] == '+' {
+		if s[0] == '-' {
+			sign = "-"
+		}
+		s = s[1:]
+	}
+	var exp string
+	if i := strings.IndexAny(s, "eE"); i >= 0 {
+		exp, s = s[i:], s[:i]
+	}
+	var frac string
+	if i := strings.IndexByte(s, '.'); i >= 0 {
+		if frac, s = s[i:], s[:i]; frac == "." {
+			frac = ""
+		}
+	}
+	if s = strings.TrimLeft(s, "0"); s == "" {
+		s = "0"
+	}
+	return sign + s + frac + exp
+}
+
+// isJSONNumber reports whether s is already in JSON number syntax.
+func isJSONNumber(s string) bool {
+	i := 0
+	if s[0] == '-' {
+		i++
+	}
+	// A leading plus sign, or no digit before the decimal point.
+	if i == len(s) || s[i] < '0' || s[i] > '9' {
+		return false
+	}
+	// A redundant leading zero.
+	if s[i] == '0' && i+1 < len(s) && '0' <= s[i+1] && s[i+1] <= '9' {
+		return false
+	}
+	// No digit after the decimal point.
+	if i := strings.IndexByte(s, '.'); i >= 0 &&
+		(i+1 == len(s) || s[i+1] < '0' || s[i+1] > '9') {
+		return false
+	}
+	return true
 }
 
 // encodeBase64 encodes s as base64 that is broken up into multiple lines

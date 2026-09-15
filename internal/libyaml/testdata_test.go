@@ -8,6 +8,7 @@ package libyaml
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -1240,8 +1241,12 @@ func callMethodFromList(t *testing.T, obj any, methodList []any, useBytes bool) 
 func parseArg(t *testing.T, arg any) int {
 	t.Helper()
 	switch v := arg.(type) {
-	case int:
-		return v
+	case int, json.Number:
+		val, ok := datatest.AsInt(v)
+		if !ok {
+			t.Fatalf("cannot parse arg as int: %v", arg)
+		}
+		return val
 	case string:
 		if looksLikeConstant(v) {
 			return parseConstant(t, v)
@@ -1381,7 +1386,7 @@ func runFieldChecks(t *testing.T, obj any, checks []FieldCheck) {
 			if !ok {
 				t.Fatalf("Cap[0] should be string, got %T", check.Cap[0])
 			}
-			wantCap, ok := check.Cap[1].(int)
+			wantCap, ok := datatest.AsInt(check.Cap[1])
 			if !ok {
 				t.Fatalf("Cap[1] should be int, got %T", check.Cap[1])
 			}
@@ -1399,7 +1404,7 @@ func runFieldChecks(t *testing.T, obj any, checks []FieldCheck) {
 			if !ok {
 				t.Fatalf("Len[0] should be string, got %T", check.Len[0])
 			}
-			wantLen, ok := check.Len[1].(int)
+			wantLen, ok := datatest.AsInt(check.Len[1])
 			if !ok {
 				t.Fatalf("Len[1] should be int, got %T", check.Len[1])
 			}
@@ -1417,7 +1422,7 @@ func runFieldChecks(t *testing.T, obj any, checks []FieldCheck) {
 			if !ok {
 				t.Fatalf("LenGt[0] should be string, got %T", check.LenGt[0])
 			}
-			minLen, ok := check.LenGt[1].(int)
+			minLen, ok := datatest.AsInt(check.LenGt[1])
 			if !ok {
 				t.Fatalf("LenGt[1] should be int, got %T", check.LenGt[1])
 			}
@@ -1445,7 +1450,7 @@ func runFieldChecks(t *testing.T, obj any, checks []FieldCheck) {
 			if !ok {
 				t.Fatalf("Gte[0] should be string, got %T", check.Gte[0])
 			}
-			minValue, ok := check.Gte[1].(int)
+			minValue, ok := datatest.AsInt(check.Gte[1])
 			if !ok {
 				t.Fatalf("Gte[1] should be int, got %T", check.Gte[1])
 			}
@@ -1537,7 +1542,7 @@ func checkEqual(t *testing.T, v reflect.Value, fieldName string, expectedValue a
 			expected := expectedValue
 			if str, ok := expectedValue.(string); ok && looksLikeConstant(str) {
 				expected = parseConstant(t, str)
-			} else if intVal, ok := expectedValue.(int); ok {
+			} else if intVal, ok := datatest.AsInt(expectedValue); ok {
 				expected = intVal
 			}
 			if got != expected {
@@ -1562,7 +1567,7 @@ func checkEqual(t *testing.T, v reflect.Value, fieldName string, expectedValue a
 	if str, ok := expectedValue.(string); ok && looksLikeConstant(str) {
 		expectedInt = parseConstant(t, str)
 		hasExpectedInt = true
-	} else if intVal, ok := expectedValue.(int); ok {
+	} else if intVal, ok := datatest.AsInt(expectedValue); ok {
 		expectedInt = intVal
 		hasExpectedInt = true
 	}

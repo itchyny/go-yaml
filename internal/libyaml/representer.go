@@ -97,7 +97,7 @@ func (r *Representer) represent(tag string, in reflect.Value) *Node {
 	case time.Duration:
 		return r.stringv(tag, reflect.ValueOf(value.String()))
 	case json.Number:
-		return r.numberv(tag, in)
+		return r.numberv(tag, reflect.ValueOf(value))
 	case Marshaler:
 		v, err := value.MarshalYAML()
 		if err != nil {

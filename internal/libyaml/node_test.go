@@ -6,6 +6,7 @@
 package libyaml
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -60,8 +61,17 @@ func runIsZeroTest(t *testing.T, tc TestCase) {
 			}
 		}
 	default:
-		// Regular value
-		v = reflect.ValueOf(tc.From)
+		// Regular value. Integers and floats are constructed as
+		// json.Number, so convert them back into numbers.
+		from := tc.From
+		if num, ok := from.(json.Number); ok {
+			if i, err := num.Int64(); err == nil {
+				from = i
+			} else if f, err := num.Float64(); err == nil {
+				from = f
+			}
+		}
+		v = reflect.ValueOf(from)
 	}
 
 	got := isZero(v)

@@ -7,9 +7,11 @@
 package libyaml
 
 import (
+	"encoding/json"
 	"testing"
 
 	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"go.yaml.in/yaml/v4/internal/testutil/datatest"
 )
 
 func TestYAML(t *testing.T) {
@@ -35,8 +37,12 @@ func runEnumStringTest(t *testing.T, tc TestCase) {
 	// Value can be int or string constant
 	var enumValue int
 	switch v := tc.Enum[1].(type) {
-	case int:
-		enumValue = v
+	case int, json.Number:
+		val, ok := datatest.AsInt(v)
+		if !ok {
+			t.Fatalf("enum value must be int or string, got %T", tc.Enum[1])
+		}
+		enumValue = val
 	case string:
 		// Parse as constant - this will be resolved by the constant lookup
 		enumValue = resolveConstant(t, v)

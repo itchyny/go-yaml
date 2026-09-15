@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"go.yaml.in/yaml/v4/internal/testutil/datatest"
 )
 
 func TestScanner(t *testing.T) {
@@ -187,7 +188,7 @@ func runCharConvertTest(t *testing.T, tc TestCase) {
 
 	input := tc.Input
 	index := tc.Index
-	want, ok := tc.Want.(int)
+	want, ok := datatest.AsInt(tc.Want)
 	assert.Truef(t, ok, "Want should be int, got %T", tc.Want)
 
 	var got int

@@ -6,7 +6,26 @@
 
 package datatest
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// AsInt returns the int value of a value loaded from test data.
+// Integers are constructed as [json.Number], so they are converted here.
+func AsInt(v any) (int, bool) {
+	switch v := v.(type) {
+	case int:
+		return v, true
+	case json.Number:
+		n, err := v.Int64()
+		if err != nil || int64(int(n)) != n {
+			return 0, false
+		}
+		return int(n), true
+	}
+	return 0, false
+}
 
 // IntOrStr can be converted from either an int or a string constant name.
 // It uses a ConstantRegistry to resolve string names to integer values.
@@ -18,8 +37,12 @@ type IntOrStr struct {
 // FromValue implements the custom converter interface used by UnmarshalStruct.
 func (ios *IntOrStr) FromValue(v any) error {
 	switch val := v.(type) {
-	case int:
-		ios.Value = val
+	case int, json.Number:
+		intVal, ok := AsInt(val)
+		if !ok {
+			return fmt.Errorf("IntOrStr value must be int or string, got %T", v)
+		}
+		ios.Value = intVal
 		return nil
 	case string:
 		registry := ios.Registry
@@ -49,7 +72,7 @@ func (bi *ByteInput) FromValue(v any) error {
 	}
 
 	// Try single int (convert to single-byte array)
-	if intVal, ok := v.(int); ok {
+	if intVal, ok := AsInt(v); ok {
 		if intVal < 0 || intVal > 255 {
 			return fmt.Errorf("byte value out of range [0-255]: %d", intVal)
 		}
@@ -66,7 +89,7 @@ func (bi *ByteInput) FromValue(v any) error {
 	// Convert integers to bytes
 	bytes := make([]byte, len(intSlice))
 	for i, val := range intSlice {
-		intVal, ok := val.(int)
+		intVal, ok := AsInt(val)
 		if !ok {
 			return fmt.Errorf("byte array element must be int, got %T", val)
 		}
@@ -130,7 +153,7 @@ type IntSlice []int
 // FromValue implements the custom converter interface used by UnmarshalStruct.
 func (is *IntSlice) FromValue(v any) error {
 	// Try int first
-	if intVal, ok := v.(int); ok {
+	if intVal, ok := AsInt(v); ok {
 		*is = []int{intVal}
 		return nil
 	}
@@ -139,7 +162,7 @@ func (is *IntSlice) FromValue(v any) error {
 	if slice, ok := v.([]any); ok {
 		ints := make([]int, len(slice))
 		for i, item := range slice {
-			intVal, ok := item.(int)
+			intVal, ok := AsInt(item)
 			if !ok {
 				return fmt.Errorf("IntSlice element %d must be int, got %T", i, item)
 			}

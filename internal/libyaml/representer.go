@@ -90,7 +90,7 @@ func (r *Representer) represent(tag string, in reflect.Value) *Node {
 		}
 		return r.nodev(in.Addr())
 	case json.Number:
-		return r.numberv(tag, in)
+		return r.numberv(tag, reflect.ValueOf(value))
 	case Marshaler:
 		v, err := value.MarshalYAML()
 		if err != nil {

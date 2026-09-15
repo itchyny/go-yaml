@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"go.yaml.in/yaml/v4/internal/testutil/assert"
+	"go.yaml.in/yaml/v4/internal/testutil/datatest"
 )
 
 func TestReader(t *testing.T) {
@@ -32,9 +33,9 @@ func runReaderSetErrorTest(t *testing.T, tc TestCase) {
 	assert.Truef(t, len(tc.Args) >= 3, "Args should have at least 3 elements, got %d", len(tc.Args))
 	problem, ok := tc.Args[0].(string)
 	assert.Truef(t, ok, "Args[0] should be string, got %T", tc.Args[0])
-	offset, ok := tc.Args[1].(int)
+	offset, ok := datatest.AsInt(tc.Args[1])
 	assert.Truef(t, ok, "Args[1] should be int, got %T", tc.Args[1])
-	value, ok := tc.Args[2].(int)
+	value, ok := datatest.AsInt(tc.Args[2])
 	assert.Truef(t, ok, "Args[2] should be int, got %T", tc.Args[2])
 
 	// Format message with value if provided
@@ -115,7 +116,7 @@ func runReaderUpdateBufferTest(t *testing.T, tc TestCase) {
 
 	// Get the length argument
 	assert.Truef(t, len(tc.Args) >= 1, "Args should have at least 1 element, got %d", len(tc.Args))
-	length, ok := tc.Args[0].(int)
+	length, ok := datatest.AsInt(tc.Args[0])
 	assert.Truef(t, ok, "Args[0] should be int, got %T", tc.Args[0])
 
 	err := parser.updateBuffer(length)
@@ -144,7 +145,7 @@ func runReaderPanicTest(t *testing.T, tc TestCase) {
 		switch tc.Function {
 		case "updateBuffer":
 			assert.Truef(t, len(tc.Args) >= 1, "Args should have at least 1 element, got %d", len(tc.Args))
-			length, ok := tc.Args[0].(int)
+			length, ok := datatest.AsInt(tc.Args[0])
 			assert.Truef(t, ok, "Args[0] should be int, got %T", tc.Args[0])
 			parser.updateBuffer(length)
 		default:

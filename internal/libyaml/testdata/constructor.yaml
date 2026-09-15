@@ -30,9 +30,19 @@
     want: 255
 
 - scalar-resolution:
-    name: Hex integer uppercase
+    name: Hex integer uppercase is not resolved
     yaml: "0XFF"
-    want: 255
+    want: '0XFF'
+
+- scalar-resolution:
+    name: Integer with a plus sign
+    yaml: "+42"
+    want: 42
+
+- scalar-resolution:
+    name: Integer with leading zeros
+    yaml: "08"
+    want: 8
 
 - scalar-resolution:
     name: Float with decimal point
@@ -52,7 +62,22 @@
 - scalar-resolution:
     name: Float with trailing zeros
     yaml: "1.500"
-    want: 1.5
+    want: 1.500
+
+- scalar-resolution:
+    name: Negative float starting with decimal
+    yaml: "-.5"
+    want: -0.5
+
+- scalar-resolution:
+    name: Float with trailing decimal point
+    yaml: "1."
+    want: 1
+
+- scalar-resolution:
+    name: Float with a plus sign and an exponent
+    yaml: "+1.e5"
+    want: 1e5
 
 - scalar-resolution:
     name: Boolean true

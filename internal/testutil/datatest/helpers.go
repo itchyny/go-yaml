@@ -96,7 +96,7 @@ func WantInt(t *testing.T, want any, defaultVal int) int {
 	if want == nil {
 		return defaultVal
 	}
-	intVal, ok := want.(int)
+	intVal, ok := AsInt(want)
 	if !ok {
 		t.Fatalf("Want should be int, got %T", want)
 	}
@@ -178,7 +178,7 @@ func GenerateData(spec any) ([]byte, error) {
 
 		// Check for loop: repeat the entire join N times
 		if loopVal, hasLoop := specMap["loop"]; hasLoop {
-			count, ok := loopVal.(int)
+			count, ok := AsInt(loopVal)
 			if !ok {
 				return nil, fmt.Errorf("loop count must be int, got %T", loopVal)
 			}
@@ -207,7 +207,7 @@ func generateSimpleLoop(loopVal any) ([]byte, error) {
 		return nil, fmt.Errorf("loop value must be string, got %T", loopArr[0])
 	}
 
-	count, ok := loopArr[1].(int)
+	count, ok := AsInt(loopArr[1])
 	if !ok {
 		return nil, fmt.Errorf("loop count must be int, got %T", loopArr[1])
 	}

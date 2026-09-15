@@ -10,9 +10,12 @@ package libyaml
 import (
 	"encoding"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math"
 	"reflect"
+	"strconv"
+	"strings"
 )
 
 // --------------------------------------------------------------------------
@@ -190,77 +193,31 @@ func (c *Constructor) constructStr(n *Node, resolved any, out reflect.Value) boo
 
 // constructInt constructs a !!int tagged value into various Go types.
 func (c *Constructor) constructInt(n *Node, resolved any, out reflect.Value) bool {
+	num, ok := resolved.(json.Number)
+	if !ok {
+		c.tagError(n, intTag, out)
+		return false
+	}
 	switch out.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		switch resolved := resolved.(type) {
-		case int:
-			if !out.OverflowInt(int64(resolved)) {
-				out.SetInt(int64(resolved))
-				return true
-			}
-		case int64:
-			if !out.OverflowInt(resolved) {
-				out.SetInt(resolved)
-				return true
-			}
-		case uint64:
-			if resolved <= math.MaxInt64 {
-				intVal := int64(resolved)
-				if !out.OverflowInt(intVal) {
-					out.SetInt(intVal)
-					return true
-				}
-			}
-		case float64:
-			if resolved >= math.MinInt64 && resolved <= math.MaxInt64 {
-				intVal := int64(resolved)
-				// Verify conversion is lossless (handles
-				// floating-point precision)
-				if float64(intVal) == resolved && !out.OverflowInt(intVal) {
-					out.SetInt(intVal)
-					return true
-				}
-			}
+		intVal, err := num.Int64()
+		if err == nil && !out.OverflowInt(intVal) {
+			out.SetInt(intVal)
+			return true
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		switch resolved := resolved.(type) {
-		case int:
-			if resolved >= 0 && !out.OverflowUint(uint64(resolved)) {
-				out.SetUint(uint64(resolved))
-				return true
-			}
-		case int64:
-			if resolved >= 0 && !out.OverflowUint(uint64(resolved)) {
-				out.SetUint(uint64(resolved))
-				return true
-			}
-		case uint64:
-			if !out.OverflowUint(resolved) {
-				out.SetUint(resolved)
-				return true
-			}
-		case float64:
-			if resolved >= 0 && resolved <= math.MaxUint64 {
-				uintVal := uint64(resolved)
-				// Verify conversion is lossless (handles
-				// floating-point precision)
-				if float64(uintVal) == resolved && !out.OverflowUint(uintVal) {
-					out.SetUint(uintVal)
-					return true
-				}
-			}
+		// Int64 does not accept values above math.MaxInt64,
+		// and the leading plus sign of a YAML integer.
+		uintVal, err := strconv.ParseUint(strings.TrimPrefix(num.String(), "+"), 10, 64)
+		if err == nil && !out.OverflowUint(uintVal) {
+			out.SetUint(uintVal)
+			return true
 		}
 	case reflect.Float32, reflect.Float64:
 		// Allow int to float conversion
-		switch resolved := resolved.(type) {
-		case int:
-			out.SetFloat(float64(resolved))
-			return true
-		case int64:
-			out.SetFloat(float64(resolved))
-			return true
-		case uint64:
-			out.SetFloat(float64(resolved))
+		floatVal, err := num.Float64()
+		if err == nil {
+			out.SetFloat(floatVal)
 			return true
 		}
 	case reflect.String:
@@ -314,25 +271,37 @@ func (c *Constructor) constructFloat(n *Node, resolved any, out reflect.Value) b
 	switch out.Kind() {
 	case reflect.Float32, reflect.Float64:
 		switch resolved := resolved.(type) {
-		case int:
-			out.SetFloat(float64(resolved))
-			return true
-		case int64:
-			out.SetFloat(float64(resolved))
-			return true
-		case uint64:
-			out.SetFloat(float64(resolved))
-			return true
 		case float64:
 			out.SetFloat(resolved)
 			return true
+		case json.Number:
+			floatVal, err := resolved.Float64()
+			if err == nil {
+				out.SetFloat(floatVal)
+				return true
+			}
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		// Allow float to int conversion if lossless
-		if fval, ok := resolved.(float64); ok {
-			if fval >= math.MinInt64 && fval <= math.MaxInt64 {
-				intVal := int64(fval)
-				if float64(intVal) == fval && !out.OverflowInt(intVal) {
+		switch resolved := resolved.(type) {
+		case float64:
+			if resolved >= math.MinInt64 && resolved <= math.MaxInt64 {
+				intVal := int64(resolved)
+				if float64(intVal) == resolved && !out.OverflowInt(intVal) {
+					out.SetInt(intVal)
+					return true
+				}
+			}
+		case json.Number:
+			intVal, err := resolved.Int64()
+			if err == nil && !out.OverflowInt(intVal) {
+				out.SetInt(intVal)
+				return true
+			}
+			floatVal, err := resolved.Float64()
+			if err == nil && floatVal >= math.MinInt64 && floatVal <= math.MaxInt64 {
+				intVal := int64(floatVal)
+				if float64(intVal) == floatVal && !out.OverflowInt(intVal) {
 					out.SetInt(intVal)
 					return true
 				}
@@ -340,10 +309,25 @@ func (c *Constructor) constructFloat(n *Node, resolved any, out reflect.Value) b
 		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		// Allow float to uint conversion if lossless
-		if fval, ok := resolved.(float64); ok {
-			if fval >= 0 && fval <= math.MaxUint64 {
-				uintVal := uint64(fval)
-				if float64(uintVal) == fval && !out.OverflowUint(uintVal) {
+		switch resolved := resolved.(type) {
+		case float64:
+			if resolved >= 0 && resolved <= math.MaxUint64 {
+				uintVal := uint64(resolved)
+				if float64(uintVal) == resolved && !out.OverflowUint(uintVal) {
+					out.SetUint(uintVal)
+					return true
+				}
+			}
+		case json.Number:
+			uintVal, err := strconv.ParseUint(strings.TrimPrefix(resolved.String(), "+"), 10, 64)
+			if err == nil && !out.OverflowUint(uintVal) {
+				out.SetUint(uintVal)
+				return true
+			}
+			floatVal, err := resolved.Float64()
+			if err == nil && floatVal >= 0 && floatVal <= math.MaxUint64 {
+				uintVal := uint64(floatVal)
+				if float64(uintVal) == floatVal && !out.OverflowUint(uintVal) {
 					out.SetUint(uintVal)
 					return true
 				}

@@ -180,7 +180,7 @@
       kind: Document
       content:
       - kind: Scalar
-        tag: '!!float'
+        tag: '!!int'
         text: '-0'
 - node-test:
     name: mapping with sequence of mappings

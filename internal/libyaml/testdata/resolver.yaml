@@ -176,11 +176,11 @@
       tag: '!!null'
 
 - resolve-infer:
-    name: Infer timestamp tag from date
+    name: Infer str tag from date
     node:
       value: '2006-01-02'
     want:
-      tag: '!!timestamp'
+      tag: '!!str'
 
 - resolve-infer:
     name: Infer str tag from plain text

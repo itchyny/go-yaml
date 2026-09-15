@@ -2153,6 +2153,10 @@ var marshalTests = []struct {
 		"-0\n",
 	},
 	{
+		map[string]json.Number{"v": json.Number("4294967296")},
+		"v: 4294967296\n",
+	},
+	{
 		"\t\n",
 		"\"\\t\\n\"\n",
 	},

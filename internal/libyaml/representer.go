@@ -14,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 	"unicode"
 	"unicode/utf8"
 )
@@ -89,12 +88,6 @@ func (r *Representer) represent(tag string, in reflect.Value) *Node {
 			in = n
 		}
 		return r.nodev(in.Addr())
-	case time.Time:
-		return r.timev(tag, in)
-	case *time.Time:
-		return r.timev(tag, in.Elem())
-	case time.Duration:
-		return r.stringv(tag, reflect.ValueOf(value.String()))
 	case Marshaler:
 		v, err := value.MarshalYAML()
 		if err != nil {
@@ -338,21 +331,6 @@ func (r *Representer) uintv(tag string, in reflect.Value) *Node {
 	s := strconv.FormatUint(in.Uint(), 10)
 	if tag == "" {
 		tag = intTag
-	}
-	return &Node{
-		Kind:  ScalarNode,
-		Tag:   tag,
-		Value: s,
-	}
-}
-
-// timev converts a Go [time.Time] to a YAML scalar node in RFC3339Nano format.
-// The node is tagged !!str because timestamps are not resolved implicitly.
-func (r *Representer) timev(tag string, in reflect.Value) *Node {
-	t := in.Interface().(time.Time)
-	s := t.Format(time.RFC3339Nano)
-	if tag == "" {
-		tag = strTag
 	}
 	return &Node{
 		Kind:  ScalarNode,

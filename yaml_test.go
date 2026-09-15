@@ -2318,7 +2318,7 @@ var marshalTests = []struct {
 	// Duration
 	{
 		map[string]time.Duration{"a": 3 * time.Second},
-		"a: 3s\n",
+		"a: 3000000000\n",
 	},
 
 	// Binary data.

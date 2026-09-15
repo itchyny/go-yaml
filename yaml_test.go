@@ -391,17 +391,22 @@ var unmarshalTests = []struct {
 	// Duration
 	{
 		"a: 3s",
-		map[string]time.Duration{"a": 3 * time.Second},
+		map[string]time.Duration{},
 	},
 	// Zero duration as a string.
 	{
 		"a: '0'",
-		map[string]time.Duration{"a": 0},
+		map[string]time.Duration{},
 	},
 	// Zero duration as an int.
 	{
 		"a: 0",
 		map[string]time.Duration{"a": 0},
+	},
+	// An int is a nanosecond count, not a duration string (issue #200).
+	{
+		"a: 123",
+		map[string]time.Duration{"a": 123},
 	},
 
 	// Binary data.
@@ -508,27 +513,32 @@ var unmarshalTests = []struct {
 	{
 		// Date only.
 		"a: 2015-01-01\n",
-		map[string]time.Time{"a": time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)},
+		map[string]any{"a": "2015-01-01"},
 	},
 	{
 		// RFC3339
 		"a: 2015-02-24T18:19:39.12Z\n",
-		map[string]time.Time{"a": time.Date(2015, 2, 24, 18, 19, 39, .12e9, time.UTC)},
+		map[string]any{"a": "2015-02-24T18:19:39.12Z"},
+	},
+	{
+		// RFC3339 with a nanosecond precision and a time zone
+		"a: 2015-02-24T18:19:39.123456789-03:00\n",
+		map[string]any{"a": "2015-02-24T18:19:39.123456789-03:00"},
 	},
 	{
 		// RFC3339 with short dates.
 		"a: 2015-2-3T3:4:5Z",
-		map[string]time.Time{"a": time.Date(2015, 2, 3, 3, 4, 5, 0, time.UTC)},
+		map[string]any{"a": "2015-2-3T3:4:5Z"},
 	},
 	{
 		// ISO8601 lower case t
 		"a: 2015-02-24t18:19:39Z\n",
-		map[string]time.Time{"a": time.Date(2015, 2, 24, 18, 19, 39, 0, time.UTC)},
+		map[string]any{"a": "2015-02-24t18:19:39Z"},
 	},
 	{
 		// space separate, no time zone
 		"a: 2015-02-24 18:19:39\n",
-		map[string]time.Time{"a": time.Date(2015, 2, 24, 18, 19, 39, 0, time.UTC)},
+		map[string]any{"a": "2015-02-24 18:19:39"},
 	},
 	// Some cases not currently handled. Uncomment these when
 	// the code is fixed.
@@ -550,22 +560,22 @@ var unmarshalTests = []struct {
 	{
 		// explicit timestamp tag on quoted string
 		"a: !!timestamp \"2015-01-01\"",
-		map[string]time.Time{"a": time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)},
+		map[string]string{"a": "2015-01-01"},
 	},
 	{
 		// explicit timestamp tag on unquoted string
 		"a: !!timestamp 2015-01-01",
-		map[string]time.Time{"a": time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)},
+		map[string]string{"a": "2015-01-01"},
 	},
 	{
 		// explicit timestamp tag into interface.
 		"a: !!timestamp \"2015-01-01\"",
-		map[string]any{"a": time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)},
+		map[string]any{"a": "2015-01-01"},
 	},
 	{
 		// implicit timestamp tag into interface.
 		"a: 2015-01-01",
-		map[string]any{"a": time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)},
+		map[string]any{"a": "2015-01-01"},
 	},
 	{
 		// implicit timestamp tag into string.
@@ -764,18 +774,6 @@ func runDecodeTest(t *testing.T, tc map[string]any) {
 	}
 }
 
-func TestUnmarshalFullTimestamp(t *testing.T) {
-	// Full timestamp in same format as encoded. This is confirmed to be
-	// properly decoded by Python as a timestamp as well.
-	str := "2015-02-24T18:19:39.123456789-03:00"
-	var tm any
-	err := yaml.Unmarshal([]byte(str), &tm)
-	assert.NoError(t, err)
-	expectedTime := time.Date(2015, 2, 24, 18, 19, 39, 123456789, tm.(time.Time).Location())
-	assert.DeepEqual(t, expectedTime, tm)
-	assert.DeepEqual(t, time.Date(2015, 2, 24, 21, 19, 39, 123456789, time.UTC), tm.(time.Time).In(time.UTC))
-}
-
 func TestDecoderSingleDocument(t *testing.T) {
 	// Test that Decoder.Decode works as expected on
 	// all the unmarshal tests.
@@ -910,13 +908,6 @@ func TestUnmarshalNaN(t *testing.T) {
 	err := yaml.Unmarshal([]byte("notanum: .NaN"), &value)
 	assert.NoError(t, err)
 	assert.True(t, math.IsNaN(value["notanum"].(float64)))
-}
-
-func TestUnmarshalDurationInt(t *testing.T) {
-	// Don't accept plain ints as durations as it's unclear (issue #200).
-	var d time.Duration
-	err := yaml.Unmarshal([]byte("123"), &d)
-	assert.ErrorMatches(t, "yaml: construct errors: line 1: cannot construct !!int `123` into time.Duration", err)
 }
 
 func TestUnmarshalErrorsFromYAML(t *testing.T) {

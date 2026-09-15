@@ -334,12 +334,12 @@
       a: 你好
 
 - encode:
-    name: timestamp-like string gets quoted
+    name: timestamp-like string stays plain
     data:
       a: '2015-02-24T18:19:39Z'
     type: map[string]string
     want: |
-      a: "2015-02-24T18:19:39Z"
+      a: 2015-02-24T18:19:39Z
 
 - encode:
     name: string containing colon-space

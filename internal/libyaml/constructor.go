@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"time"
 )
 
 // --------------------------------------------------------------------------
@@ -144,7 +143,6 @@ func (c *Constructor) Construct(n *Node, out reflect.Value) (good bool) {
 // Package-level Variables and Constants
 var (
 	nodeType       = reflect.TypeOf(Node{})
-	durationType   = reflect.TypeOf(time.Duration(0))
 	stringMapType  = reflect.TypeOf(map[string]any{})
 	generalMapType = reflect.TypeOf(map[any]any{})
 	ifaceType      = generalMapType.Elem()
@@ -171,16 +169,6 @@ func (c *Constructor) constructStr(n *Node, resolved any, out reflect.Value) boo
 	case reflect.String:
 		out.SetString(n.Value)
 		return true
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		// Handle time.Duration parsing from strings like "3s", "1m",
-		// etc.
-		if out.Type() == durationType {
-			d, err := time.ParseDuration(n.Value)
-			if err == nil {
-				out.SetInt(int64(d))
-				return true
-			}
-		}
 	case reflect.Bool:
 		// YAML 1.1 compatibility: allow string values like "y", "on",
 		// "Off" as bools
@@ -204,24 +192,19 @@ func (c *Constructor) constructStr(n *Node, resolved any, out reflect.Value) boo
 func (c *Constructor) constructInt(n *Node, resolved any, out reflect.Value) bool {
 	switch out.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		isDuration := out.Type() == durationType
-
 		switch resolved := resolved.(type) {
 		case int:
-			if !isDuration && !out.OverflowInt(int64(resolved)) {
+			if !out.OverflowInt(int64(resolved)) {
 				out.SetInt(int64(resolved))
-				return true
-			} else if isDuration && resolved == 0 {
-				out.SetInt(0)
 				return true
 			}
 		case int64:
-			if !isDuration && !out.OverflowInt(resolved) {
+			if !out.OverflowInt(resolved) {
 				out.SetInt(resolved)
 				return true
 			}
 		case uint64:
-			if !isDuration && resolved <= math.MaxInt64 {
+			if resolved <= math.MaxInt64 {
 				intVal := int64(resolved)
 				if !out.OverflowInt(intVal) {
 					out.SetInt(intVal)
@@ -229,20 +212,12 @@ func (c *Constructor) constructInt(n *Node, resolved any, out reflect.Value) boo
 				}
 			}
 		case float64:
-			if !isDuration && resolved >= math.MinInt64 && resolved <= math.MaxInt64 {
+			if resolved >= math.MinInt64 && resolved <= math.MaxInt64 {
 				intVal := int64(resolved)
 				// Verify conversion is lossless (handles
 				// floating-point precision)
 				if float64(intVal) == resolved && !out.OverflowInt(intVal) {
 					out.SetInt(intVal)
-					return true
-				}
-			}
-		case string:
-			if out.Type() == durationType {
-				d, err := time.ParseDuration(resolved)
-				if err == nil {
-					out.SetInt(int64(d))
 					return true
 				}
 			}

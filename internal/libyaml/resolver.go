@@ -3,8 +3,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Tag resolution for YAML scalars.
-// Determines implicit types (int, float, bool, null, timestamp) from untagged
-// scalar values.
+// Determines implicit types (int, float, bool, null) from untagged scalar
+// values.
 
 package libyaml
 
@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // resolveMapItem holds a resolved value and its YAML tag for exact string
@@ -40,7 +39,7 @@ func NewResolver(opts *Options) *Resolver {
 // - Default quoted scalars to !!str
 // - Default sequences to !!seq
 // - Default mappings to !!map
-// - Resolve plain scalars to implicit types (int, float, bool, null, timestamp)
+// - Resolve plain scalars to implicit types (int, float, bool, null)
 func (r *Resolver) Resolve(n *Node) {
 	if n == nil {
 		return
@@ -86,7 +85,7 @@ func (r *Resolver) Resolve(n *Node) {
 
 // resolve determines the YAML tag and Go value for a scalar string.
 // It takes a tag hint and the scalar string value, and returns the resolved
-// tag and the corresponding Go value (int, float, bool, [time.Time], etc.).
+// tag and the corresponding Go value (int, float, bool, etc.).
 // If the tag is already specified and non-resolvable, it returns the input
 // unchanged.
 func resolve(tag string, in string) (rtag string, out any) {
@@ -148,13 +147,10 @@ func resolve(tag string, in string) (rtag string, out any) {
 
 		case 'D', 'S':
 			// Int, float, or timestamp.
-			// Only try values as a timestamp if the value is
-			// unquoted or there's an explicit !!timestamp tag.
-			if tag == "" || tag == timestampTag {
-				t, ok := parseTimestamp(in)
-				if ok {
-					return timestampTag, t
-				}
+			if tag == timestampTag {
+				// Ignore timestamp tag.
+				tag = strTag
+				return strTag, in
 			}
 
 			plain := strings.ReplaceAll(in, "_", "")
@@ -199,19 +195,6 @@ var negativeZero = math.Copysign(0.0, -1.0)
 // yamlStyleFloat matches floating-point numbers in YAML style (including
 // scientific notation and numbers starting with a dot).
 var yamlStyleFloat = regexp.MustCompile(`^[-+]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)(?:[eE][-+]?[0-9]+)?$`)
-
-// allowedTimestampFormats lists the timestamp formats supported by the
-// resolver.
-// This is a subset of the formats allowed by the regular expression
-// defined at http://yaml.org/type/timestamp.html.
-var allowedTimestampFormats = []string{
-	"2006-1-2T15:4:5.999999999Z07:00", // RCF3339Nano with short date fields.
-	"2006-1-2t15:4:5.999999999Z07:00", // RFC3339Nano with short date fields and lower-case "t".
-	"2006-1-2 15:4:5.999999999",       // space separated with no time zone
-	"2006-1-2",                        // date only
-	// Notable exception: time.Parse cannot handle: "2001-12-14 21:59:43.10 -5"
-	// from the set of examples.
-}
 
 // init initializes the resolveTable with character class mappings for tag resolution.
 func init() {
@@ -283,31 +266,6 @@ func encodeBase64(s string) string {
 		}
 	}
 	return string(out[:k])
-}
-
-// parseTimestamp parses s as a timestamp string and
-// returns the timestamp and reports whether it succeeded.
-// Timestamp formats are defined at http://yaml.org/type/timestamp.html
-func parseTimestamp(s string) (time.Time, bool) {
-	// TODO write code to check all the formats supported by
-	// http://yaml.org/type/timestamp.html instead of using time.Parse.
-
-	// Quick check: all date formats start with YYYY-.
-	i := 0
-	for ; i < len(s); i++ {
-		if c := s[i]; c < '0' || c > '9' {
-			break
-		}
-	}
-	if i != 4 || i == len(s) || s[i] != '-' {
-		return time.Time{}, false
-	}
-	for _, format := range allowedTimestampFormats {
-		if t, err := time.Parse(format, s); err == nil {
-			return t, true
-		}
-	}
-	return time.Time{}, false
 }
 
 // formatResolverError creates a LoadError for resolver-stage errors.

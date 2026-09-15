@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"go.yaml.in/yaml/v4"
+	"github.com/itchyny/go-yaml"
 )
 
 // Token represents a YAML token with comment information

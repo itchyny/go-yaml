@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"testing"
 
-	"go.yaml.in/yaml/v4/internal/testutil/assert"
-	"go.yaml.in/yaml/v4/internal/testutil/datatest"
+	"github.com/itchyny/go-yaml/internal/testutil/assert"
+	"github.com/itchyny/go-yaml/internal/testutil/datatest"
 )
 
 func TestOptions(t *testing.T) {

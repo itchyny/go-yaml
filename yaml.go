@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"io"
 
-	"go.yaml.in/yaml/v4/internal/libyaml"
-	"go.yaml.in/yaml/v4/plugin/limit"
+	"github.com/itchyny/go-yaml/internal/libyaml"
+	"github.com/itchyny/go-yaml/plugin/limit"
 )
 
 //-----------------------------------------------------------------------------
@@ -280,7 +280,7 @@ type DepthContext = libyaml.DepthContext
 //
 // Example:
 //
-//	import "go.yaml.in/yaml/v4/plugin/limit"
+//	import "github.com/itchyny/go-yaml/plugin/limit"
 //	loader := yaml.NewLoader(data, yaml.WithPlugin(limit.New(limit.AliasNone())))
 //
 // Plugins use public types and can be implemented by external packages.

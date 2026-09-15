@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"go.yaml.in/yaml/v4/internal/testutil/assert"
-	"go.yaml.in/yaml/v4/internal/testutil/datatest"
+	"github.com/itchyny/go-yaml/internal/testutil/assert"
+	"github.com/itchyny/go-yaml/internal/testutil/datatest"
 )
 
 func TestYAML(t *testing.T) {

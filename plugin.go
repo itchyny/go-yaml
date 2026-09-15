@@ -11,7 +11,7 @@ package yaml
 //
 // Example usage:
 //
-//	import "go.yaml.in/yaml/v4/plugin/limit"
+//	import "github.com/itchyny/go-yaml/plugin/limit"
 //	loader := yaml.NewLoader(data, yaml.WithPlugin(limit.New(limit.AliasNone())))
 type LimitPlugin interface {
 	// CheckDepth is called when the parser increases nesting depth.
